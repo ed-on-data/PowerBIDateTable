@@ -1,17 +1,16 @@
-// fn_CreateDateTable
 let
-    CreateDateTable = (Prefix) =>
+    CreateDateTable = (Prefix,StartDate as date,EndDate as date) =>
 let
-    xPrefix = if Prefix="" then "" else Text.Clean(Prefix)&" ",
-    StartDate=#date(2019,01,01),
-    EndDate =#date(Date.Year(DateTime.LocalNow()),12,31),
+    pPrefix = if Prefix="" then "" else Text.Clean(Prefix)&" ",
+    pStartDate= if StartDate="" then #date(2019,01,01) else StartDate,
+    pEndDate = if EndDate="" then #date(Date.Year(DateTime.LocalNow()),12,31) else EndDate,
 
     //Create lists of month and day names for use later on
     MonthList = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"},
     DayList = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"},
     
 	//Find the number of days between the end date and the start date
-    NumberOfDates = Duration.Days(EndDate-StartDate),
+    NumberOfDates = Duration.Days(pEndDate-pStartDate),
     
 	//Generate a continuous list of dates from the start date to the end date
     DateList = List.Dates(StartDate, NumberOfDates, #duration(1, 0, 0, 0)),
@@ -34,13 +33,8 @@ let
     MonthName = Table.AddColumn(DayOfWeekNumber, "MonthName", each MonthList{[MonthNumberOfYear]-1}),
     DayName = Table.AddColumn(MonthName, "DayName", each Date.ToText([Date],"ddd")),
     
-	//Add a column that returns true if the date on rows is the current date
     IsToday = Table.AddColumn(DayName, "IsToday", each Date.IsInCurrentDay([Date])),
-	
-	
-	
     YearsAgo = Table.AddColumn(IsToday, "Years Ago", each Number.From([Year] - Date.Year(DateTime.LocalNow()))),
-	
     MonthsAgo = Table.AddColumn(#"YearsAgo", "Months Ago", each ([MonthNumberOfYear]+(12*[Years Ago])) - Date.Month(DateTime.LocalNow())),
     Month = Table.AddColumn(#"MonthsAgo", "Month", each Text.Start([MonthName],3)&" '"&Text.End(Number.ToText([Year]),2)),
 
@@ -48,12 +42,13 @@ let
     LastDayOfWeek = Table.AddColumn(FirstDayOfWeek, "LastDayOfWeek", each Date.AddDays([Date],6-[DayOfWeekNumber])),
     Week = Table.AddColumn(LastDayOfWeek, "Week", each Date.ToText([FirstDayOfWeek],"MMM-dd")&" to "&Date.ToText([LastDayOfWeek],"MMM-dd")),
     WeeksAgo = Table.AddColumn(Week, "Weeks Ago", each Number.From([FirstDayOfWeek] - Date.From(Date.AddDays(DateTime.LocalNow(),(Date.DayOfWeek(DateTime.LocalNow(),Day.Monday)*-1)-1)))/7),
-    Quarter = Table.AddColumn(WeeksAgo,"Quarter", each Number.From(Date.QuarterOfYear([Date])))  //,
+    Quarter = Table.AddColumn(WeeksAgo,"Quarter", each Number.From(Date.QuarterOfYear([Date]))) ,
 
-    //RenameColumns = Table.RenameColumns(Quarter, Table.ToRows(Table.AddColumn(Table.FromList(Table.ColumnNames(Quarter)), "New Column Name", each Text.Insert ( [Column1] ,0, xPrefix ))))
+    RenameColumns = if pPrefix="" 
+    then Table.RenameColumns(Quarter, Table.ToRows(Table.AddColumn(Table.FromList(Table.ColumnNames(Quarter)), "New Column Name", each Text.Insert ( [Column1] ,0, pPrefix ))))
+    else Quarter 
 
 in
-    //RenameColumns
-    Quarter
+    RenameColumns
 in
     CreateDateTable
